@@ -10,15 +10,15 @@
 
 int display_w = 1280;
 int display_h = 720;
-std::string textBuffer = "Welcome to coditor";
+std::string text_buffer = "Welcome to coditor";
 GLFWwindow* window;
 
 void Run()
 {
     // Menu bar
-    float menuBarHeight = 0.0f;
+    float menu_bar_height = 0.0f;
     if (ImGui::BeginMainMenuBar()) {
-        menuBarHeight = ImGui::GetWindowSize().y;
+        menu_bar_height = ImGui::GetWindowSize().y;
         if (ImGui::BeginMenu("File")) {
             if (ImGui::MenuItem("Open")) { /* load file */ }
             if (ImGui::MenuItem("Save")) { /* save file */ }
@@ -27,22 +27,48 @@ void Run()
         ImGui::EndMainMenuBar();
     }
 
-    // Get full window size and set editor window position/size
-    ImGui::SetNextWindowPos(ImVec2(0, menuBarHeight));
-    ImGui::SetNextWindowSize(ImVec2(display_w, display_h - menuBarHeight));
+    // Sizes
+    float file_explorer_width = 250.0f;  // left panel width
+    float status_bar_height   = 20.0f;   // bottom bar height
+    float editor_width       = display_w - file_explorer_width;
+    float editor_height      = display_h - menu_bar_height - status_bar_height;
 
-    ImGuiWindowFlags editor_flags = ImGuiWindowFlags_NoResize |
-                                     ImGuiWindowFlags_NoMove |
-                                     ImGuiWindowFlags_NoCollapse;
+    // File Tree
+    ImGui::SetNextWindowPos(ImVec2(0, menu_bar_height));
+    ImGui::SetNextWindowSize(ImVec2(file_explorer_width, editor_height));
+    ImGuiWindowFlags side_flags = ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
+    ImGui::Begin("Files", nullptr, side_flags);
+    ImGui::Text("File Explorer");
+    ImGui::Separator();
 
-    ImGui::Begin("Filename", nullptr, editor_flags);
+    //TODO: Add functionality to show and find files 
+    // Example mock files
+    if (ImGui::Selectable("main.cpp")) { /* load file */ }
+    if (ImGui::Selectable("coditor.h")) { /* load file */ }
+    if (ImGui::Selectable("CMakeLists.txt")) { /* load file */ }
+    ImGui::End();
 
-    // Make InputTextMultiline fill the content region of the window
-    ImVec2 contentSize = ImGui::GetContentRegionAvail();
-    ImGui::InputTextMultiline("##editor", &textBuffer[0], textBuffer.size() + 1024, contentSize);
+    // Editor
+    ImGui::SetNextWindowPos(ImVec2(file_explorer_width, menu_bar_height));
+    ImGui::SetNextWindowSize(ImVec2(editor_width, editor_height));
+    ImGuiWindowFlags editor_flags = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse;
+    ImGui::Begin("Editor", nullptr, editor_flags);
+    ImVec2 content_size = ImGui::GetContentRegionAvail();
+    ImGui::InputTextMultiline("##editor", &text_buffer[0], text_buffer.size() + 1024, content_size);
+    ImGui::End();
 
+    // Status bar
+    ImGui::SetNextWindowPos(ImVec2(0, display_h - status_bar_height));
+    ImGui::SetNextWindowSize(ImVec2(display_w, status_bar_height));
+    ImGuiWindowFlags status_flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
+                                    ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse;
+    ImGui::Begin("StatusBar", nullptr, status_flags);
+
+    //TODO: make the status bar actually show metadata
+    ImGui::Text("Ln 1, Col 1    |    UTF-8    |    Ready");
     ImGui::End();
 }
+
 
 
 
