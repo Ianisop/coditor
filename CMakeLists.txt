@@ -2,6 +2,7 @@
 
 project(coditor LANGUAGES C CXX)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -25,9 +26,7 @@ set(IMGUI_SOURCES
     ${IMGUI_DIR}/backends/imgui_impl_opengl3.cpp
 )
 
-# --------------------------
-# Your executable
-# --------------------------
+
 add_executable(coditor
     src/coditor.cpp
     src/coditor.h
