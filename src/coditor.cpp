@@ -2,6 +2,7 @@
 #include "backends/imgui_impl_glfw.h"
 #include "backends/imgui_impl_opengl3.h"
 #include <GLFW/glfw3.h>
+#include <cfloat>
 #include <fstream>
 #include <string>
 #include "coditor.h"
@@ -25,8 +26,16 @@ void Run()
     }
 
     // Editor
-    ImGui::Begin("asfasgagerage");
-    ImGui::InputTextMultiline("##editor", &textBuffer[0], textBuffer.size() + 1024, ImVec2(-FLT_MIN, ImGui::GetTextLineHeight() * 20));
+    ImGuiWindowFlags editor_flags = ImGuiWindowFlags_NoResize |
+                 ImGuiWindowFlags_NoMove |
+                 ImGuiWindowFlags_NoCollapse | 
+                 ImGuiWindowFlags_AlwaysVerticalScrollbar;
+
+
+
+
+    ImGui::Begin("Filename",nullptr, editor_flags);
+    ImGui::InputTextMultiline("##editor", &textBuffer[0], textBuffer.size() + 1024, ImVec2(display_w, display_h));
     ImGui::End();
 
 }
