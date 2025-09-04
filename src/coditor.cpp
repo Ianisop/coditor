@@ -12,6 +12,61 @@ int display_w = 1280;
 int display_h = 720;
 std::string text_buffer = "Welcome to coditor";
 GLFWwindow* window;
+float file_explorer_width;
+
+bool dragging = false;
+ImVec2 drag_offset;
+
+void DrawToolbar()
+{
+    ImGui::SetNextWindowPos(ImVec2(0, 0));
+    ImGui::SetNextWindowSize(ImVec2(display_w, 0));
+
+    ImGuiWindowFlags flags =
+                             ImGuiWindowFlags_NoResize   |
+                             ImGuiWindowFlags_NoMove     |
+                             ImGuiWindowFlags_NoCollapse |
+                             ImGuiWindowFlags_NoScrollbar;
+
+    ImGui::Begin("Toolbar", nullptr, flags);
+
+    // Example buttons
+    if (ImGui::Button("New")) {}
+    ImGui::SameLine();
+    if (ImGui::Button("Open")) {}
+    ImGui::SameLine();
+    if (ImGui::Button("Save")) {}
+
+    if (ImGui::IsWindowHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
+        dragging = true;
+
+        // Store offset
+        double mx, my;
+        glfwGetCursorPos(window, &mx, &my);
+        int wx, wy;
+        glfwGetWindowPos(window, &wx, &wy);
+
+        drag_offset = ImVec2((float)mx - (float)wx, (float)my - (float)wy);
+    }
+
+    if (dragging && ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+        double mx, my;
+        glfwGetCursorPos(window, &mx, &my);
+
+        // Snap window position so mouse stays aligned
+        int new_x = (int)(mx - drag_offset.x);
+        int new_y = (int)(my - drag_offset.y);
+        glfwSetWindowPos(window, new_x, new_y);
+    }
+
+    if (dragging && ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
+        dragging = false;
+    }
+
+    ImGui::End();
+}
+
+
 
 void Run()
 {
@@ -28,10 +83,12 @@ void Run()
     }
 
     // Sizes
-    float file_explorer_width = 250.0f;  // left panel width
+    file_explorer_width = ImGui::GetWindowWidth();  // left panel width
     float status_bar_height   = 20.0f;   // bottom bar height
     float editor_width       = display_w - file_explorer_width;
     float editor_height      = display_h - menu_bar_height - status_bar_height;
+
+    DrawToolbar();
 
     // File Tree
     ImGui::SetNextWindowPos(ImVec2(0, menu_bar_height));
@@ -70,13 +127,12 @@ void Run()
 }
 
 
-
-
-
 int main() 
 {
     // Init GLFW + OpenGL
     glfwInit();
+    glfwWindowHint(GLFW_DECORATED, GLFW_FALSE);
+
     window = glfwCreateWindow(display_w, display_h, "coditor", nullptr, nullptr);
     glfwMakeContextCurrent(window);
 

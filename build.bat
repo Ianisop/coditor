@@ -31,4 +31,4 @@ build\coditor.exe
 goto end
 
 :end
-pause
+exit
