@@ -13,7 +13,6 @@ CMakeUserPresets.json
 out/
 .vs/
 build/
-src/libs/glfw/docs
 .cache/
 # CLion
 #  JetBrains specific template is maintained in a separate JetBrains.gitignore that can
