@@ -16,7 +16,9 @@ GLFWwindow* window;
 void Run()
 {
     // Menu bar
+    float menuBarHeight = 0.0f;
     if (ImGui::BeginMainMenuBar()) {
+        menuBarHeight = ImGui::GetWindowSize().y;
         if (ImGui::BeginMenu("File")) {
             if (ImGui::MenuItem("Open")) { /* load file */ }
             if (ImGui::MenuItem("Save")) { /* save file */ }
@@ -25,20 +27,23 @@ void Run()
         ImGui::EndMainMenuBar();
     }
 
-    // Editor
+    // Get full window size and set editor window position/size
+    ImGui::SetNextWindowPos(ImVec2(0, menuBarHeight));
+    ImGui::SetNextWindowSize(ImVec2(display_w, display_h - menuBarHeight));
+
     ImGuiWindowFlags editor_flags = ImGuiWindowFlags_NoResize |
-                 ImGuiWindowFlags_NoMove |
-                 ImGuiWindowFlags_NoCollapse | 
-                 ImGuiWindowFlags_AlwaysVerticalScrollbar;
+                                     ImGuiWindowFlags_NoMove |
+                                     ImGuiWindowFlags_NoCollapse;
 
+    ImGui::Begin("Filename", nullptr, editor_flags);
 
+    // Make InputTextMultiline fill the content region of the window
+    ImVec2 contentSize = ImGui::GetContentRegionAvail();
+    ImGui::InputTextMultiline("##editor", &textBuffer[0], textBuffer.size() + 1024, contentSize);
 
-
-    ImGui::Begin("Filename",nullptr, editor_flags);
-    ImGui::InputTextMultiline("##editor", &textBuffer[0], textBuffer.size() + 1024, ImVec2(display_w, display_h));
     ImGui::End();
-
 }
+
 
 
 
