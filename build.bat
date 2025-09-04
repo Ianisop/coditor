@@ -1,17 +1,25 @@
 @echo off
 setlocal
 
-:: Adjust this if MinGW is installed somewhere else
-set PATH=C:\mingw32\bin;%PATH%
+REM Determine action
+if "%1"=="" goto build
+if /i "%1"=="clean" goto clean
+goto build
 
-:: Clean old build
-if exist build rmdir /s /q build
+:clean
+echo Cleaning old build...
+rmdir /s /q build
 
-:: Configure with MinGW
+echo Configuring and building...
 cmake -S . -B build -G "MinGW Makefiles" -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++
-
-:: Build
 cmake --build build
+goto end
 
-endlocal
+:build
+echo Building project...
+cmake -S . -B build -G "MinGW Makefiles" -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++
+cmake --build build
+goto end
+
+:end
 pause
