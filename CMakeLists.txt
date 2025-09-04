@@ -1,24 +1,51 @@
-﻿cmake_minimum_required(VERSION 3.8)
-set(CMAKE_C_COMPILER "g++")
-set(CMAKE_CXX_COMPILER "g++")
+﻿cmake_minimum_required(VERSION 3.16)
+
+project(coditor LANGUAGES C CXX)
+
 set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 
+# --------------------------
+# GLFW (from src/libs/glfw)
+# --------------------------
+add_subdirectory(src/libs/glfw)
 
+# --------------------------
+# ImGui (from src/libs/imgui)
+# --------------------------
+set(IMGUI_DIR ${CMAKE_SOURCE_DIR}/src/libs/imgui)
 
-# Enable Hot Reload for MSVC compilers if supported.
-if (POLICY CMP0141)
-  cmake_policy(SET CMP0141 NEW)
-  set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT "$<IF:$<AND:$<C_COMPILER_ID:MSVC>,$<CXX_COMPILER_ID:MSVC>>,$<$<CONFIG:Debug,RelWithDebInfo>:EditAndContinue>,$<$<CONFIG:Debug,RelWithDebInfo>:ProgramDatabase>>")
-endif()
+set(IMGUI_SOURCES
+    ${IMGUI_DIR}/imgui.cpp
+    ${IMGUI_DIR}/imgui_draw.cpp
+    ${IMGUI_DIR}/imgui_widgets.cpp
+    ${IMGUI_DIR}/imgui_tables.cpp
+    ${IMGUI_DIR}/backends/imgui_impl_glfw.cpp
+    ${IMGUI_DIR}/backends/imgui_impl_opengl3.cpp
+)
 
-project(coditor LANGUAGES CXX)
+# --------------------------
+# Your executable
+# --------------------------
+add_executable(coditor
+    src/coditor.cpp
+    src/coditor.h
+    ${IMGUI_SOURCES}
+)
 
-# Add source to this project's executable.
-add_executable(coditor src/coditor.cpp src/coditor.h)
+# --------------------------
+# Includes + Linking
+# --------------------------
+find_package(OpenGL REQUIRED)
 
-if (CMAKE_VERSION VERSION_GREATER 3.12)
-  set_property(TARGET coditor PROPERTY CXX_STANDARD 20)
-endif()
+target_include_directories(coditor PRIVATE
+    ${IMGUI_DIR}
+    ${IMGUI_DIR}/backends
+    src/libs/glfw/include
+)
 
-# TODO: Add tests and install targets if needed.
+target_link_libraries(coditor PRIVATE
+    glfw
+    OpenGL::GL
+)
