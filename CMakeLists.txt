@@ -30,6 +30,8 @@ set(IMGUI_SOURCES
 add_executable(coditor
     src/coditor.cpp
     src/coditor.h
+    src/file_explorer.cpp
+    src/file_explorer.h
     ${IMGUI_SOURCES}
 )
 

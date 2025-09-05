@@ -6,17 +6,19 @@
 #include <fstream>
 #include <string>
 #include "coditor.h"
+#include "file_explorer.h"
 
 
 int display_w = 1280;
 int display_h = 720;
-std::string text_buffer = "Welcome to coditor";
+std::string text_buffer = "";
 GLFWwindow* window;
 
 bool dragging = false;
 ImVec2 drag_offset;
 double offsetX, offsetY;
 
+std::vector<FileExplorer::FileInfo> files;
 
 float toolbar_height     = 30.0f;
 float status_bar_height  = 30.0f;
@@ -97,11 +99,17 @@ void Run()
     ImGui::SetNextWindowSize(ImVec2(file_explorer_width, editor_height));
     ImGuiWindowFlags side_flags = ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
     ImGui::Begin("Files", nullptr, side_flags);
-    ImGui::Text("File Explorer");
+    ImGui::Text("Current Directory");
     ImGui::Separator();
-    if (ImGui::Selectable("main.cpp")) {}
-    if (ImGui::Selectable("coditor.h")) {}
-    if (ImGui::Selectable("CMakeLists.txt")) {}
+    for(auto & file : files) {
+        if (file.is_directory) {
+            ImGui::Text("[DIR] %s", file.name.c_str());
+        } else {
+            if (ImGui::Selectable(file.name.c_str())) {
+                text_buffer = file.contents;
+            }
+        }
+    }
     ImGui::End();
 
     // --- Editor ---
@@ -141,6 +149,7 @@ int main()
     ImGui_ImplOpenGL3_Init("#version 130");
     ImGui::StyleColorsDark();
 
+    files = FileExplorer::ListFiles(".");
 
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
