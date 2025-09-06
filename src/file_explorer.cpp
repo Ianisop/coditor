@@ -50,4 +50,11 @@ std::vector<FileInfo> ListFiles(const std::string& path) {
     }
     return files;
     }
+
+    Directory GetDirectoryInfo(const std::string& path) {
+        Directory dir;
+        dir.name = fs::path(path).filename().string();
+        dir.files = ListFiles(path);
+        return dir;
+    }
 }

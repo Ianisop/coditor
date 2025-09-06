@@ -3,6 +3,7 @@
 #include "backends/imgui_impl_opengl3.h"
 #include <GLFW/glfw3.h>
 #include <cfloat>
+#include <cstdio>
 #include <fstream>
 #include <string>
 #include "coditor.h"
@@ -19,11 +20,15 @@ ImVec2 drag_offset;
 double offsetX, offsetY;
 
 std::vector<FileExplorer::FileInfo> files;
+FileExplorer::Directory current_directory;
+FileExplorer::FileInfo current_file; // Currently opened file
 
 float toolbar_height     = 30.0f;
 float status_bar_height  = 30.0f;
 float file_explorer_width = 200.0f;
+int line_count = 1;
 
+//TOOD: add a tab bar so you can tab in between multiple files, add more buffers too
 void DrawToolbar()
 {
     ImGui::SetNextWindowPos(ImVec2(0, 0));
@@ -38,9 +43,31 @@ void DrawToolbar()
 
     ImGui::Begin("Coditor", nullptr, flags);
 
-    // Example buttons
-    ImGui::LabelText("Coditor","");
+    float windowWidth = ImGui::GetWindowSize().x;
+    const char* title = "Coditor";
+    ImVec2 textSize = ImGui::CalcTextSize(title);
+
+    // Width of all buttons
+    float buttonWidth = 30.0f;
+    float spacing = ImGui::GetStyle().ItemSpacing.x;
+    float totalButtonsWidth = buttonWidth * 3 + spacing * 2;
+
+    // Start a horizontal layout
+    ImGui::BeginGroup();
+
+    // Left spacer
+    ImGui::Dummy(ImVec2((windowWidth - textSize.x - totalButtonsWidth) * 0.5f, 0.0f));
     ImGui::SameLine();
+
+    // Title
+    ImGui::TextUnformatted(title);
+    ImGui::SameLine();
+
+    // Right spacer to push buttons to the right
+    ImGui::Dummy(ImVec2((windowWidth - textSize.x - totalButtonsWidth) * 0.5f, 0.0f));
+    ImGui::SameLine();
+
+    // Buttons
     if (ImGui::Button("-")) {}
     ImGui::SameLine();
     if (ImGui::Button("O")) {}
@@ -49,6 +76,10 @@ void DrawToolbar()
     {
         glfwSetWindowShouldClose(window, true);
     }
+
+    ImGui::EndGroup();
+
+
 
 
 
@@ -84,6 +115,49 @@ void DrawToolbar()
     ImGui::End();
 }
 
+bool SaveChangesToFile(const std::string& filename, const std::string& contents) {
+    std::ofstream file(filename, std::ios::binary);
+    if (!file) {
+        return false; // Failed to open file
+    }
+    file << contents;
+    return true; // Successfully saved
+}
+
+static int MyCallbackResize(ImGuiInputTextCallbackData* data)
+{
+    if (data->EventFlag == ImGuiInputTextFlags_CallbackResize)
+    {
+        std::string* str = (std::string*)data->UserData;
+        str->resize(data->BufTextLen);
+        data->Buf = (char*)str->c_str();
+    }
+    return 0;
+}
+
+static int TextEditCallback(ImGuiInputTextCallbackData* data)
+{
+    // You can store cursor position for later
+    int cursor = data->CursorPos;
+
+    // Count lines and column from buffer start → cursor
+    int line = 1;
+    int col  = 1;
+    for (int i = 0; i < cursor; i++) {
+        if (data->Buf[i] == '\n') {
+            line++;
+            col = 1;
+        } else {
+            col++;
+        }
+    }
+
+    // Store it in user data (e.g., a struct or global)
+    auto* pos = (std::pair<int,int>*)data->UserData;
+    *pos = { line, col };
+
+    return 0;
+}
 
 
 void Run()
@@ -99,14 +173,16 @@ void Run()
     ImGui::SetNextWindowSize(ImVec2(file_explorer_width, editor_height));
     ImGuiWindowFlags side_flags = ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
     ImGui::Begin("Files", nullptr, side_flags);
-    ImGui::Text("Current Directory");
+    ImGui::Text("%s", current_directory.name.c_str());
     ImGui::Separator();
     for(auto & file : files) {
+        //TODO: make this a display all the files in the dir as selectables
         if (file.is_directory) {
             ImGui::Text("[DIR] %s", file.name.c_str());
         } else {
             if (ImGui::Selectable(file.name.c_str())) {
                 text_buffer = file.contents;
+                current_file = file;
             }
         }
     }
@@ -118,7 +194,12 @@ void Run()
     ImGuiWindowFlags editor_flags = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse;
     ImGui::Begin("Editor", nullptr, editor_flags);
     ImVec2 content_size = ImGui::GetContentRegionAvail();
-    ImGui::InputTextMultiline("##editor", &text_buffer[0], text_buffer.size() + 1024, content_size);
+    ImGui::InputTextMultiline("##editor",
+    (char*)text_buffer.c_str(), text_buffer.capacity() + 1,
+    content_size,
+    ImGuiInputTextFlags_CallbackResize,
+    MyCallbackResize, &text_buffer);
+
     ImGui::End();
 
     // --- Status bar ---
@@ -127,9 +208,26 @@ void Run()
     ImGuiWindowFlags status_flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
                                     ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse;
     ImGui::Begin("StatusBar", nullptr, status_flags);
-    ImGui::Text("Ln 1, Col 1    |    UTF-8    |    Ready");
+    ImGui::Text("%d  |    UTF-8    |    Ready", line_count);
     ImGui::End();
+
+
+
+    if(ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_S)) {
+        printf("Ctrl+S pressed\n");
+        // Save the file{
+        if (SaveChangesToFile(current_directory.name + "/" + current_file.name, text_buffer)) {
+            // Successfully saved
+             printf("File saved: %s\n", current_file.name.c_str());
+        } else {
+                // Handle save error
+                printf("Failed to save file: %s\n", current_file.name.c_str());
+            }
+
+    }
 }
+    
+
 
 
 
@@ -149,7 +247,8 @@ int main()
     ImGui_ImplOpenGL3_Init("#version 130");
     ImGui::StyleColorsDark();
 
-    files = FileExplorer::ListFiles(".");
+    current_directory = FileExplorer::GetDirectoryInfo("./testDir");
+    files = FileExplorer::ListFiles(current_directory.name);
 
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();

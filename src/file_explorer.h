@@ -20,4 +20,5 @@ namespace FileExplorer {
 
     std::string ReadFileContents(const std::filesystem::path& path);
     std::vector<FileInfo> ListFiles(const std::string& path);
+    Directory GetDirectoryInfo(const std::string& path);
 }
