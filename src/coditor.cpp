@@ -28,6 +28,38 @@ float status_bar_height  = 30.0f;
 float file_explorer_width = 200.0f;
 int line_count = 1;
 
+struct EditorState {
+    std::string* buffer;
+    int line = 1;
+    int col  = 1;
+};
+
+
+void ShowDirectoryTree(const std::string& path) {
+    // Get all files/subdirs in this directory
+    auto entries = FileExplorer::ListFiles(path);
+
+    for (auto& entry : entries) {
+        if (entry.is_directory) {
+            // Render as collapsible tree node
+            if (ImGui::TreeNode(entry.name.c_str())) {
+                // Recurse into subdirectory
+                ShowDirectoryTree(path + "/" + entry.name);
+                ImGui::TreePop();
+            }
+        } else {
+            // Render as a selectable file
+            if (ImGui::Selectable(entry.name.c_str())) {
+                text_buffer = entry.contents;
+                if (text_buffer.capacity() < 256) text_buffer.reserve(256);
+                current_file = entry;
+            }
+        }
+    }
+}
+
+
+
 //TOOD: add a tab bar so you can tab in between multiple files, add more buffers too
 void DrawToolbar()
 {
@@ -110,8 +142,6 @@ void DrawToolbar()
         dragging = false;
     }
 
-
-
     ImGui::End();
 }
 
@@ -123,6 +153,31 @@ bool SaveChangesToFile(const std::string& filename, const std::string& contents)
     file << contents;
     return true; // Successfully saved
 }
+
+static int EditorCallback(ImGuiInputTextCallbackData* data)
+{
+    auto* st = static_cast<EditorState*>(data->UserData);
+
+    // Handle dynamic resize
+    if (data->EventFlag == ImGuiInputTextFlags_CallbackResize) {
+        st->buffer->resize(data->BufTextLen);
+        data->Buf = st->buffer->data();
+        return 0;
+    }
+
+    // Always update cursor position otherwise
+    int cursor = data->CursorPos;
+    int line = 1, col = 1;
+    for (int i = 0; i < cursor; ++i) {
+        if (data->Buf[i] == '\n') { ++line; col = 1; }
+        else { ++col; }
+    }
+    st->line = line;
+    st->col  = col;
+
+    return 0;
+}
+
 
 static int MyCallbackResize(ImGuiInputTextCallbackData* data)
 {
@@ -137,10 +192,10 @@ static int MyCallbackResize(ImGuiInputTextCallbackData* data)
 
 static int TextEditCallback(ImGuiInputTextCallbackData* data)
 {
-    // You can store cursor position for later
+    // store cursor pos for later
     int cursor = data->CursorPos;
 
-    // Count lines and column from buffer start → cursor
+    // Count lines and column from buffer from the start until the cursor pos
     int line = 1;
     int col  = 1;
     for (int i = 0; i < cursor; i++) {
@@ -152,7 +207,7 @@ static int TextEditCallback(ImGuiInputTextCallbackData* data)
         }
     }
 
-    // Store it in user data (e.g., a struct or global)
+
     auto* pos = (std::pair<int,int>*)data->UserData;
     *pos = { line, col };
 
@@ -175,17 +230,9 @@ void Run()
     ImGui::Begin("Files", nullptr, side_flags);
     ImGui::Text("%s", current_directory.name.c_str());
     ImGui::Separator();
-    for(auto & file : files) {
-        //TODO: make this a display all the files in the dir as selectables
-        if (file.is_directory) {
-            ImGui::Text("[DIR] %s", file.name.c_str());
-        } else {
-            if (ImGui::Selectable(file.name.c_str())) {
-                text_buffer = file.contents;
-                current_file = file;
-            }
-        }
-    }
+
+    ShowDirectoryTree(current_directory.name);
+
     ImGui::End();
 
     // --- Editor ---
@@ -193,14 +240,23 @@ void Run()
     ImGui::SetNextWindowSize(ImVec2(editor_width, editor_height));
     ImGuiWindowFlags editor_flags = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse;
     ImGui::Begin("Editor", nullptr, editor_flags);
+
     ImVec2 content_size = ImGui::GetContentRegionAvail();
-    ImGui::InputTextMultiline("##editor",
-    (char*)text_buffer.c_str(), text_buffer.capacity() + 1,
-    content_size,
-    ImGuiInputTextFlags_CallbackResize,
-    MyCallbackResize, &text_buffer);
+    static EditorState edState { &text_buffer, 1, 1 };
+
+    ImGui::InputTextMultiline(
+        "##editor",
+        text_buffer.data(),                       
+        text_buffer.capacity() + 1,               // capacity, not size
+        content_size,
+        ImGuiInputTextFlags_CallbackResize |
+        ImGuiInputTextFlags_CallbackAlways,
+        EditorCallback,
+        &edState
+    );
 
     ImGui::End();
+
 
     // --- Status bar ---
     ImGui::SetNextWindowPos(ImVec2(0, display_h - status_bar_height));
@@ -208,8 +264,9 @@ void Run()
     ImGuiWindowFlags status_flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
                                     ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse;
     ImGui::Begin("StatusBar", nullptr, status_flags);
-    ImGui::Text("%d  |    UTF-8    |    Ready", line_count);
+    ImGui::Text("Ln %d, Col %d    |    UTF-8    |    Ready", edState.line, edState.col);
     ImGui::End();
+
 
 
 
@@ -230,7 +287,6 @@ void Run()
 
 
 
-
 int main() 
 {
     // Init GLFW + OpenGL
@@ -247,7 +303,7 @@ int main()
     ImGui_ImplOpenGL3_Init("#version 130");
     ImGui::StyleColorsDark();
 
-    current_directory = FileExplorer::GetDirectoryInfo("./testDir");
+    current_directory = FileExplorer::GetDirectoryInfo(".");
     files = FileExplorer::ListFiles(current_directory.name);
 
     while (!glfwWindowShouldClose(window)) {
