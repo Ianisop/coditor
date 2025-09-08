@@ -8,6 +8,7 @@
 #include <string>
 #include "coditor.h"
 #include "file_explorer.h"
+#include "code_editor.h"
 
 
 int display_w = 1280;
